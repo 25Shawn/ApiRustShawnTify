@@ -1,0 +1,26 @@
+[package]
+name = "apiRust"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+mp3-duration = "0.1.10"
+actix-web = "4.0"
+infer = "0.7"
+serde_json = "1.0"
+playback-rs = "0.4.4"
+rodio = "0.15"
+mysql = "25.0.1"
+serde = "1.0.210"
+dotenv = "0.15.0"
+sqlx = "0.8.2"
+chrono = "0.4"
+
+
+[package.metadata.assets]
+include = ["src/musiques/*.mp3"]
+
+[target.'cfg(windows)']
+rustflags = ["-L/apiRust/vcpkg"]
+

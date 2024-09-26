@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "ffmepg": "^0.0.2-security",
+    "ffmpeg": "^0.0.4",
+    "ffprobe": "^1.1.2",
+    "magic": "^2.3.5-alpha.1",
+    "mongodb": "^6.8.1"
+  }
+}
