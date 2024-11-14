@@ -1,4 +1,4 @@
-prefix=C:\Users\shawn\Documents\ProjetTechnologieEmergente\Api\ApiRustShawnTify\apiRust\target\debug\build\libz-sys-7ae11c8e30fe69a3\out
+prefix=C:\Users\shawn\Documents\ProjetTechnologieEmergente\Api\ApiRustShawnTify\target\debug\build\libz-sys-7ae11c8e30fe69a3\out
 exec_prefix=@exec_prefix@
 libdir=${prefix}/lib
 sharedlibdir=@sharedlibdir@

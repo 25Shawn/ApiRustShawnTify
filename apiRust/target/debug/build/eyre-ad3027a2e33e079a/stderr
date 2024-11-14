@@ -1,5 +1,5 @@
 error[E0407]: method `backtrace` is not a member of trait `Error`
-  --> C:\Users\shawn\Documents\ProjetTechnologieEmergente\Api\ApiRustShawnTify\apiRust\target\debug\build\eyre-ad3027a2e33e079a\out\probe.rs:19:9
+  --> C:\Users\shawn\Documents\ProjetTechnologieEmergente\Api\ApiRustShawnTify\target\debug\build\eyre-ad3027a2e33e079a\out\probe.rs:19:9
    |
 19 | /         fn backtrace(&self) -> Option<&Backtrace> {
 20 | |             let backtrace = Backtrace::capture();
@@ -11,7 +11,7 @@ error[E0407]: method `backtrace` is not a member of trait `Error`
    | |_________^ not a member of trait `Error`
 
 warning: the feature `backtrace` has been stable since 1.65.0 and no longer requires an attribute to enable
- --> C:\Users\shawn\Documents\ProjetTechnologieEmergente\Api\ApiRustShawnTify\apiRust\target\debug\build\eyre-ad3027a2e33e079a\out\probe.rs:2:16
+ --> C:\Users\shawn\Documents\ProjetTechnologieEmergente\Api\ApiRustShawnTify\target\debug\build\eyre-ad3027a2e33e079a\out\probe.rs:2:16
   |
 2 |     #![feature(backtrace)]
   |                ^^^^^^^^^
