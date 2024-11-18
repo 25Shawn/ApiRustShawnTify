@@ -855,10 +855,27 @@ async fn connexion_user(user: web::Json<User>) -> impl Responder {
 
 
 #[tokio::main]
-#[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // Connexion à la base de données, ou initialisation de tout autre service
+    // Par exemple, créer une connexion à PostgreSQL
+    let (client, connection) = tokio_postgres::connect(
+        "host=localhost user=postgres password=secret dbname=mydb",
+        NoTls,
+    )
+    .await
+    .expect("Erreur de connexion à la base de données");
+
+    // Exécuter la connexion dans une tâche séparée pour éviter que le programme ne bloque
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("Erreur de connexion : {}", e);
+        }
+    });
+
+    // Démarrer le serveur Actix
     let server_handle = start_server();
     server_handle.await?;
+
     Ok(())
 }
 
@@ -866,7 +883,7 @@ fn start_server() -> actix_web::dev::Server {
     HttpServer::new(|| {
         App::new()
             .route("/addMusique", web::post().to(add_musique))
-            .route("/musiques", web::get().to(get_all_musiques)) 
+            .route("/musiques", web::get().to(get_all_musiques))
             .route("/musique/{uuid}", web::get().to(get_musique))
             .route("/supprimer/{uuid}", web::delete().to(supprimer_musique))
 
