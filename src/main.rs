@@ -854,7 +854,7 @@ async fn connexion_user(user: web::Json<User>) -> impl Responder {
 // }
 
 
-
+#[tokio::main]
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let server_handle = start_server();
