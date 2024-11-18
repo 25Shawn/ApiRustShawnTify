@@ -1,0 +1,38 @@
+thread 'coordinator' panicked at /rustc/6c6d210089e4589afee37271862b9f88ba1d7755\compiler\rustc_codegen_ssa\src\back\write.rs:1676:29:
+/rustc/6c6d210089e4589afee37271862b9f88ba1d7755\compiler\rustc_codegen_ssa\src\back\write.rs:1676:29: worker thread panicked
+stack backtrace:
+   0:     0x7ffa46999d23 - std::backtrace_rs::backtrace::dbghelp64::trace
+                               at /rustc/6c6d210089e4589afee37271862b9f88ba1d7755\library/std\src\..\..\backtrace\src\backtrace\dbghelp64.rs:91
+   1:     0x7ffa46999d23 - std::backtrace_rs::backtrace::trace_unsynchronized
+                               at /rustc/6c6d210089e4589afee37271862b9f88ba1d7755\library/std\src\..\..\backtrace\src\backtrace\mod.rs:66
+   2:     0x7ffa46999d23 - std::backtrace::Backtrace::create
+                               at /rustc/6c6d210089e4589afee37271862b9f88ba1d7755\library/std\src\backtrace.rs:331
+   3:     0x7ffa46999c6a - std::backtrace::Backtrace::force_capture
+                               at /rustc/6c6d210089e4589afee37271862b9f88ba1d7755\library/std\src\backtrace.rs:312
+   4:     0x7ffa47f9f54d - memchr
+   5:     0x7ffa469b4122 - alloc::boxed::impl$50::call
+                               at /rustc/6c6d210089e4589afee37271862b9f88ba1d7755\library/alloc\src\boxed.rs:2467
+   6:     0x7ffa469b4122 - std::panicking::rust_panic_with_hook
+                               at /rustc/6c6d210089e4589afee37271862b9f88ba1d7755\library/std\src\panicking.rs:809
+   7:     0x7ffa495a49bf - ar_archive_writer[22c52c3bbdcbb0e8]::object_reader::get_member_alignment
+   8:     0x7ffa4959e7e9 - ar_archive_writer[22c52c3bbdcbb0e8]::object_reader::get_member_alignment
+   9:     0x7ffa4959d4d9 - ar_archive_writer[22c52c3bbdcbb0e8]::object_reader::get_member_alignment
+  10:     0x7ffa4963600d - rustc_middle[37ac30d8d8165830]::util::bug::bug_fmt
+  11:     0x7ffa49615c3d - rustc_middle[37ac30d8d8165830]::ty::consts::const_param_default
+  12:     0x7ffa49615a56 - rustc_middle[37ac30d8d8165830]::ty::consts::const_param_default
+  13:     0x7ffa49635f42 - rustc_middle[37ac30d8d8165830]::util::bug::bug_fmt
+  14:     0x7ffa46a7e0ba - rustc_interface[d750d52cf63d3c87]::proc_macro_decls::proc_macro_decls_static
+  15:     0x7ffa43a80a7d - llvm::DenseMap<llvm::StructType * __ptr64,llvm::detail::DenseSetEmpty,llvm::IRMover::StructTypeKeyInfo,llvm::detail::DenseSetPair<llvm::StructType * __ptr64> >::~DenseMap<llvm::StructType * __ptr64,llvm::detail::DenseSetEmpty,llvm::IRMover::StructTypeKeyIn
+  16:     0x7ffa43a8d45f - llvm::DenseMap<llvm::StructType * __ptr64,llvm::detail::DenseSetEmpty,llvm::IRMover::StructTypeKeyInfo,llvm::detail::DenseSetPair<llvm::StructType * __ptr64> >::~DenseMap<llvm::StructType * __ptr64,llvm::detail::DenseSetEmpty,llvm::IRMover::StructTypeKeyIn
+  17:     0x7ffa469c58dd - alloc::boxed::impl$48::call_once
+                               at /rustc/6c6d210089e4589afee37271862b9f88ba1d7755\library/alloc\src\boxed.rs:2453
+  18:     0x7ffa469c58dd - alloc::boxed::impl$48::call_once
+                               at /rustc/6c6d210089e4589afee37271862b9f88ba1d7755\library/alloc\src\boxed.rs:2453
+  19:     0x7ffa469c58dd - std::sys::pal::windows::thread::impl$0::new::thread_start
+                               at /rustc/6c6d210089e4589afee37271862b9f88ba1d7755\library/std\src\sys\pal\windows\thread.rs:55
+  20:     0x7ffb44a3259d - BaseThreadInitThunk
+  21:     0x7ffb45a8af38 - RtlUserThreadStart
+
+
+rustc version: 1.83.0-nightly (6c6d21008 2024-09-22)
+platform: x86_64-pc-windows-msvc

@@ -1,0 +1,11 @@
+C:\Users\shawn\Documents\ProjetTechnologieEmergente\Api\ApiRustShawnTify\target\debug\deps\liblibc-daf73d0f88027376.rmeta: C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src/lib.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\macros.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\fixed_width_ints.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\windows\mod.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\windows\msvc\mod.rs
+
+C:\Users\shawn\Documents\ProjetTechnologieEmergente\Api\ApiRustShawnTify\target\debug\deps\liblibc-daf73d0f88027376.rlib: C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src/lib.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\macros.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\fixed_width_ints.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\windows\mod.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\windows\msvc\mod.rs
+
+C:\Users\shawn\Documents\ProjetTechnologieEmergente\Api\ApiRustShawnTify\target\debug\deps\libc-daf73d0f88027376.d: C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src/lib.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\macros.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\fixed_width_ints.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\windows\mod.rs C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\windows\msvc\mod.rs
+
+C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src/lib.rs:
+C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\macros.rs:
+C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\fixed_width_ints.rs:
+C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\windows\mod.rs:
+C:\Users\shawn\.cargo\registry\src\index.crates.io-6f17d22bba15001f\libc-0.2.164\src\windows\msvc\mod.rs:
