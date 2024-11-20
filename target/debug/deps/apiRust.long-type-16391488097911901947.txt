@@ -1,1 +1,0 @@
-fn({type error}) -> impl std::future::Future<Output = impl Responder> {add_musique}
