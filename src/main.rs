@@ -471,7 +471,7 @@ fn start_server() -> actix_web::dev::Server {
 
     // Récupérer le port et le convertir en u16
     let port: u16 = env::var("PG_PORT")
-        .expect("PG_PORT doit être défini dans le fichier .env")
+    .unwrap_or_else(|_| "5432".to_string())
         .parse()
         .expect("PG_PORT doit être un entier valide");
 
