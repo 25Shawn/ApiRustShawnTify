@@ -9,6 +9,10 @@ use sqlx::FromRow;
 use tokio_postgres::{NoTls, Error};
 use std::env;
 use dotenv::dotenv;
+use actix_multipart::Multipart;
+use futures::StreamExt; // For stream extensions like `next()`
+use tokio::fs::File; // For file handling
+use tokio::io::AsyncWriteExt;
 
 
 #[derive(Debug, FromRow, Serialize)]
@@ -49,39 +53,86 @@ struct Utilisateur {
 /**
 * Gestion de la musique
 */
-async fn add_musique(params: web::Json<AddMusiqueParams>) -> impl Responder {
-    let file_path = format!("./src/musiques/{}", &params.uuid);
+async fn add_musique(mut payload: Multipart) -> impl Responder {
+    let save_path = "./src/musiques/";
 
-    // Obtenir la durée du fichier audio
-    let total_duration = get_audio_duration(&file_path);
+    // Process multipart payload
+    while let Some(item) = payload.next().await {
+        let mut field = match item {
+            Ok(field) => field,
+            Err(_) => {
+                return HttpResponse::BadRequest().json(ResponseMessage {
+                    message: "Erreur lors du traitement du fichier".to_string(),
+                })
+            }
+        };
 
-    if total_duration.is_zero() {
-        return HttpResponse::InternalServerError().json(ResponseMessage {
-            message: "Impossible d'obtenir la durée de l'audio".to_string(),
-        });
-    }
+        let filename = field.content_disposition().get_filename().unwrap_or_default().to_string();
+        let filepath = format!("{}{}", save_path, filename);
 
-    let client = match get_connection().await {
-        Ok(client) => client,
-        Err(_) => {
+        // Open file for writing
+        let mut file = match File::create(&filepath).await {
+            Ok(f) => f,
+            Err(_) => {
+                return HttpResponse::InternalServerError().json(ResponseMessage {
+                    message: "Impossible de créer le fichier sur le serveur".to_string(),
+                })
+            }
+        };
+
+        // Write the file
+        while let Some(chunk) = field.next().await {
+            let data = match chunk {
+                Ok(data) => data,
+                Err(_) => {
+                    return HttpResponse::InternalServerError().json(ResponseMessage {
+                        message: "Erreur lors de l'écriture du fichier".to_string(),
+                    })
+                }
+            };
+            if let Err(_) = file.write_all(&data).await {
+                return HttpResponse::InternalServerError().json(ResponseMessage {
+                    message: "Erreur lors de l'écriture du fichier".to_string(),
+                });
+            }
+        }
+
+        // Get audio duration
+        let total_duration = get_audio_duration(&filepath);
+        if total_duration.is_zero() {
             return HttpResponse::InternalServerError().json(ResponseMessage {
-                message: "Erreur de connexion à la base de données".to_string(),
+                message: "Impossible d'obtenir la durée de l'audio".to_string(),
             });
         }
-    };
 
-    let query = "INSERT INTO musique (uuid, duree) VALUES ($1, $2)";
-    if let Err(_) = client.execute(query, &[&params.uuid, &(total_duration.as_secs().to_string())]).await {
+        // Insert into database
+        let client = match get_connection().await {
+            Ok(client) => client,
+            Err(_) => {
+                return HttpResponse::InternalServerError().json(ResponseMessage {
+                    message: "Erreur de connexion à la base de données".to_string(),
+                })
+            }
+        };
 
-        return HttpResponse::InternalServerError().json(ResponseMessage {
-            message: "Erreur lors de l'ajout de la musique".to_string(),
+        // Insert music record into database
+        let query = "INSERT INTO musique (uuid, duree) VALUES ($1, $2)";
+        if let Err(_) = client.execute(query, &[&filename, &(total_duration.as_secs().to_string())]).await {
+            return HttpResponse::InternalServerError().json(ResponseMessage {
+                message: "Erreur lors de l'ajout de la musique".to_string(),
+            });
+        }
+
+        return HttpResponse::Ok().json(ResponseMessage {
+            message: format!("Musique ajoutée avec succès: {}", filename),
         });
     }
 
-    HttpResponse::Ok().json(ResponseMessage {
-        message: format!("Musique ajoutée avec succès: {}", &params.uuid),
+    HttpResponse::BadRequest().json(ResponseMessage {
+        message: "Aucun fichier trouvé".to_string(),
     })
 }
+
 
 // Fonction pour obtenir la durée du fichier audio
 fn get_audio_duration(file_path: &str) -> std::time::Duration {
@@ -493,7 +544,7 @@ fn start_server() -> actix_web::dev::Server {
             .route("/addUser", web::post().to(add_user))
             .route("/user", web::get().to(connexion_user))
     })
-    .bind(("0.0.0.0", port)) // Adresse et port
+    .bind(("0.0.0.0", port))
     .expect("Échec de la liaison à l'adresse")
     .run()
 }
