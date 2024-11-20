@@ -7,6 +7,8 @@ use database::db::get_connection;
 mod models;
 use sqlx::FromRow;
 use tokio_postgres::{NoTls, Error};
+use std::env;
+use dotenv::dotenv;
 
 
 #[derive(Debug, FromRow, Serialize)]
@@ -465,27 +467,37 @@ async fn main() -> std::io::Result<()> {
 }
 
 fn start_server() -> actix_web::dev::Server {
+    dotenv().ok();
+
+    // Récupérer le port et le convertir en u16
+    let port: u16 = env::var("PG_PORT")
+        .expect("PG_PORT doit être défini dans le fichier .env")
+        .parse()
+        .expect("PG_PORT doit être un entier valide");
+
+    // Lancer votre application sur ce port
+    println!("Lancement du serveur sur le port {}", port);
     HttpServer::new(|| {
         App::new()
+            // Définition des routes
             .route("/addMusique", web::post().to(add_musique))
-            .route("/musiques", web::get().to(get_all_musiques)) 
+            .route("/musiques", web::get().to(get_all_musiques))
             .route("/musique/{uuid}", web::get().to(get_musique))
             .route("/supprimer/{uuid}", web::delete().to(supprimer_musique))
-
             .route("/addPlaylist", web::post().to(add_playlist))
             .route("/playlist", web::get().to(get_all_playlists))
             .route("/playlist/{id}", web::get().to(get_playlist))
             .route("/supprimerPlaylist/{id}", web::delete().to(supprimer_playlist))
             .route("/addMusiqueToPlaylist", web::post().to(add_musique_to_playlist))
             .route("/removeMusiqueFromPlaylist", web::post().to(remove_musique_from_playlist))
-
             .route("/addUser", web::post().to(add_user))
             .route("/user", web::get().to(connexion_user))
     })
-    .bind("127.0.0.1:8080")
-    .expect("Failed to bind to address")
+    .bind(("0.0.0.0", port)) // Adresse et port
+    .expect("Échec de la liaison à l'adresse")
     .run()
 }
+
 
 
 
