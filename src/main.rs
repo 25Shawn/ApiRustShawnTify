@@ -129,13 +129,6 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
             });
         }
 
-        // Retourner une réponse d'erreur avec le message et les détails
-        return HttpResponse::InternalServerError().json(ResponseMessage {
-            message: "Erreur lors de l'ajout de la musique".to_string(),
-            details: Some(error_details),
-        });
-    }
-
         return HttpResponse::Ok().json(ResponseMessage {
             message: format!("Musique ajoutée avec succès: {}", filename),
         });
@@ -145,6 +138,7 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
         message: "Aucun fichier trouvé".to_string(),
     })
 }
+
 
 
 // Fonction pour obtenir la durée du fichier audio
