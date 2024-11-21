@@ -32,7 +32,6 @@ struct AddPlaylistParams{
 #[derive(Serialize)]
 struct ResponseMessage {
     message: String,
-    details: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -124,14 +123,11 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
 
         // Insérer la musique dans la base de données
         let query = "INSERT INTO musique (uuid, duree) VALUES ($1, $2)";
-        if let Err(e) = client.execute(query, &[&filename, &(total_duration.as_secs().to_string())]).await {
-        // Créer un message d'erreur détaillé en cas de problème
-        let error_details = format!(
-            "Échec de l'insertion. UUID: {}, Durée: {} secondes. Détails de l'erreur: {}",
-            filename,
-            total_duration.as_secs(),
-            e.to_string() // Utiliser l'erreur retournée pour plus de détails
-        );
+        if let Err(_) = client.execute(query, &[&filename, &(total_duration.as_secs().to_string())]).await {
+            return HttpResponse::InternalServerError().json(ResponseMessage {
+                message: "filename+".to_string()+&filename+"total duration"+ &total_duration.as_secs().to_string(),
+            });
+        }
 
         // Retourner une réponse d'erreur avec le message et les détails
         return HttpResponse::InternalServerError().json(ResponseMessage {
@@ -147,7 +143,6 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
 
     HttpResponse::BadRequest().json(ResponseMessage {
         message: "Aucun fichier trouvé".to_string(),
-        details: None,
     })
 }
 
