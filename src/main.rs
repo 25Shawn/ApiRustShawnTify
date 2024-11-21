@@ -13,6 +13,7 @@ use futures::StreamExt; // For stream extensions like `next()`
 use tokio::fs::File; // For file handling
 use tokio::io::AsyncWriteExt;
 use actix_cors::Cors;
+use std::path::Path;
 
 
 #[derive(Debug, FromRow, Serialize)]
@@ -50,6 +51,14 @@ struct Utilisateur {
 */
 async fn add_musique(mut payload: Multipart) -> impl Responder {
     let save_path = "./src/musiques/";
+
+    if !Path::new(save_path).exists() {
+        if let Err(_) = std::fs::create_dir_all(save_path) {
+            return HttpResponse::InternalServerError().json(ResponseMessage {
+                message: "Erreur lors de la création du répertoire".to_string(),
+            });
+        }
+    }
 
     // Process multipart payload
     while let Some(item) = payload.next().await {
