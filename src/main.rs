@@ -147,6 +147,7 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
 
     HttpResponse::BadRequest().json(ResponseMessage {
         message: "Aucun fichier trouvé".to_string(),
+        details: None,
     })
 }
 
