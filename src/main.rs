@@ -52,6 +52,7 @@ struct Utilisateur {
 async fn add_musique(mut payload: Multipart) -> impl Responder {
     let save_path = "./src/musiques/";
 
+    // Créer le répertoire si nécessaire
     if !Path::new(save_path).exists() {
         if let Err(_) = std::fs::create_dir_all(save_path) {
             return HttpResponse::InternalServerError().json(ResponseMessage {
@@ -60,7 +61,7 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
         }
     }
 
-    // Process multipart payload
+    // Traiter chaque partie du multipart
     while let Some(item) = payload.next().await {
         let mut field = match item {
             Ok(field) => field,
@@ -71,10 +72,11 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
             }
         };
 
+        // Obtenir le nom du fichier et créer le chemin
         let filename = field.content_disposition().get_filename().unwrap_or_default().to_string();
         let filepath = format!("{}{}", save_path, filename);
 
-        // Open file for writing
+        // Créer le fichier pour écrire les données
         let mut file = match File::create(&filepath).await {
             Ok(f) => f,
             Err(_) => {
@@ -84,7 +86,7 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
             }
         };
 
-        // Write the file
+        // Écrire les données du fichier dans le fichier local
         while let Some(chunk) = field.next().await {
             let data = match chunk {
                 Ok(data) => data,
@@ -101,7 +103,7 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
             }
         }
 
-        // Get audio duration
+        // Traitement de la durée de l'audio (si nécessaire)
         let total_duration = get_audio_duration(&filepath);
         if total_duration.is_zero() {
             return HttpResponse::InternalServerError().json(ResponseMessage {
@@ -109,7 +111,7 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
             });
         }
 
-        // Insert into database
+        // Insertion dans la base de données
         let client = match get_connection().await {
             Ok(client) => client,
             Err(_) => {
@@ -119,7 +121,7 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
             }
         };
 
-        // Insert music record into database
+        // Insérer la musique dans la base de données
         let query = "INSERT INTO musique (uuid, duree) VALUES ($1, $2)";
         if let Err(_) = client.execute(query, &[&filename, &(total_duration.as_secs().to_string())]).await {
             return HttpResponse::InternalServerError().json(ResponseMessage {
