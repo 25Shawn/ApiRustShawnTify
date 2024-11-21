@@ -6,13 +6,13 @@ mod database;
 use database::db::get_connection;
 mod models;
 use sqlx::FromRow;
-use tokio_postgres::{NoTls, Error};
 use std::env;
 use dotenv::dotenv;
 use actix_multipart::Multipart;
 use futures::StreamExt; // For stream extensions like `next()`
 use tokio::fs::File; // For file handling
 use tokio::io::AsyncWriteExt;
+use actix_cors::Cors;
 
 
 #[derive(Debug, FromRow, Serialize)]
@@ -26,11 +26,6 @@ struct Musique {
 struct AddPlaylistParams{
     nom_playlist: String,
     id_createur: String,
-}
-
-#[derive(Deserialize)]
-struct AddMusiqueParams {
-    uuid: String,
 }
 
 #[derive(Serialize)]
@@ -512,25 +507,31 @@ async fn connexion_user(user: web::Json<User>) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let server_handle = start_server();
-    server_handle.await?;
+    if let Err(e) = start_server().await {
+        eprintln!("Erreur lors du démarrage du serveur : {}", e);
+    }
     Ok(())
 }
 
-fn start_server() -> actix_web::dev::Server {
+pub async fn start_server() -> std::io::Result<()> {
     dotenv().ok();
 
-    // Récupérer le port et le convertir en u16
     let port: u16 = env::var("PG_PORT")
-    .unwrap_or_else(|_| "5432".to_string())
+        .unwrap_or_else(|_| "5432".to_string())
         .parse()
         .expect("PG_PORT doit être un entier valide");
 
-    // Lancer votre application sur ce port
     println!("Lancement du serveur sur le port {}", port);
-    HttpServer::new(|| {
+
+    let server = HttpServer::new(|| {
         App::new()
-            // Définition des routes
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allow_any_method()
+                    .allow_any_header()
+                    .max_age(3600),
+            )
             .route("/addMusique", web::post().to(add_musique))
             .route("/musiques", web::get().to(get_all_musiques))
             .route("/musique/{uuid}", web::get().to(get_musique))
@@ -543,16 +544,8 @@ fn start_server() -> actix_web::dev::Server {
             .route("/removeMusiqueFromPlaylist", web::post().to(remove_musique_from_playlist))
             .route("/addUser", web::post().to(add_user))
             .route("/user", web::get().to(connexion_user))
-    })
-    .bind(("0.0.0.0", port))
-    .expect("Échec de la liaison à l'adresse")
-    .run()
+    });
+
+    // Essayer de lier et démarrer le serveur
+    server.bind(format!("0.0.0.0:{}", port))?.run().await
 }
-
-
-
-
-
-
-
-
