@@ -14,6 +14,7 @@ use tokio::fs::File; // For file handling
 use tokio::io::AsyncWriteExt;
 use actix_cors::Cors;
 use std::path::Path;
+use actix_files as fs;
 
 
 #[derive(Debug, FromRow, Serialize)]
@@ -21,12 +22,15 @@ struct Musique {
     id: i32,
     uuid: String,
     duree: String,
+    image: Option<String>,
+    image_url: Option<String>,
+
 }
 
 #[derive(Deserialize)]
 struct AddPlaylistParams{
     nom_playlist: String,
-    id_createur: String,
+    id_createur: i32,
 }
 
 #[derive(Serialize)]
@@ -49,17 +53,24 @@ struct Utilisateur {
 /**
 * Gestion de la musique
 */
-async fn add_musique(mut payload: Multipart) -> impl Responder {
-    let save_path = "./src/musiques/";
 
-    // Créer le répertoire si nécessaire
-    if !Path::new(save_path).exists() {
-        if let Err(_) = std::fs::create_dir_all(save_path) {
-            return HttpResponse::InternalServerError().json(ResponseMessage {
-                message: "Erreur lors de la création du répertoire".to_string(),
-            });
+async fn add_musique(mut payload: Multipart) -> impl Responder {
+    let save_path_audio = "./src/musiques/";
+    let save_path_images = "./src/images/";
+
+    // Créer les répertoires si nécessaires
+    for path in [save_path_audio, save_path_images] {
+        if !Path::new(path).exists() {
+            if let Err(_) = std::fs::create_dir_all(path) {
+                return HttpResponse::InternalServerError().json(ResponseMessage {
+                    message: format!("Erreur lors de la création du répertoire {}", path),
+                });
+            }
         }
     }
+
+    let mut audio_filename: Option<String> = None;
+    let mut image_filename: Option<String> = None;
 
     // Traiter chaque partie du multipart
     while let Some(item) = payload.next().await {
@@ -68,76 +79,98 @@ async fn add_musique(mut payload: Multipart) -> impl Responder {
             Err(_) => {
                 return HttpResponse::BadRequest().json(ResponseMessage {
                     message: "Erreur lors du traitement du fichier".to_string(),
-                })
+                });
             }
         };
 
-        // Obtenir le nom du fichier et créer le chemin
-        let filename = field.content_disposition().get_filename().unwrap_or_default().to_string();
-        let filepath = format!("{}{}", save_path, filename);
+        // Obtenir le nom du fichier
+        let filename = field
+            .content_disposition()
+            .get_filename()
+            .unwrap_or_default()
+            .to_string();
 
-        // Créer le fichier pour écrire les données
+        // Déterminer le chemin du fichier en fonction de son type
+        let filepath = if filename.ends_with(".mp3") {
+            audio_filename = Some(filename.clone());
+            format!("{}{}", save_path_audio, filename)
+        } else if filename.ends_with(".png") || filename.ends_with(".jpg") || filename.ends_with(".jpeg") {
+            image_filename = Some(filename.clone());
+            format!("{}{}", save_path_images, filename)
+        } else {
+            return HttpResponse::BadRequest().json(ResponseMessage {
+                message: format!("Type de fichier non supporté : {}", filename),
+            });
+        };
+
+        // Sauvegarder le fichier localement
         let mut file = match File::create(&filepath).await {
             Ok(f) => f,
             Err(_) => {
                 return HttpResponse::InternalServerError().json(ResponseMessage {
-                    message: "Impossible de créer le fichier sur le serveur".to_string(),
-                })
+                    message: format!("Erreur lors de la sauvegarde du fichier : {}", filename),
+                });
             }
         };
 
-        // Écrire les données du fichier dans le fichier local
         while let Some(chunk) = field.next().await {
             let data = match chunk {
                 Ok(data) => data,
                 Err(_) => {
                     return HttpResponse::InternalServerError().json(ResponseMessage {
-                        message: "Erreur lors de l'écriture du fichier".to_string(),
-                    })
+                        message: format!("Erreur lors de l'écriture du fichier : {}", filename),
+                    });
                 }
             };
             if let Err(_) = file.write_all(&data).await {
                 return HttpResponse::InternalServerError().json(ResponseMessage {
-                    message: "Erreur lors de l'écriture du fichier".to_string(),
+                    message: format!("Erreur lors de l'écriture du fichier : {}", filename),
                 });
             }
         }
+    }
 
-        // Traitement de la durée de l'audio (si nécessaire)
-        let total_duration = get_audio_duration(&filepath);
+    // Vérifier si les deux fichiers ont été téléchargés
+    if let (Some(audio), Some(image)) = (audio_filename, image_filename) {
+        // Calculer la durée du fichier audio
+        let audio_path = format!("{}{}", save_path_audio, audio);
+        let total_duration = get_audio_duration(&audio_path);
         if total_duration.is_zero() {
             return HttpResponse::InternalServerError().json(ResponseMessage {
                 message: "Impossible d'obtenir la durée de l'audio".to_string(),
             });
         }
 
-        // Insertion dans la base de données
+        // Insérer dans la base de données
         let client = match get_connection().await {
             Ok(client) => client,
             Err(_) => {
                 return HttpResponse::InternalServerError().json(ResponseMessage {
                     message: "Erreur de connexion à la base de données".to_string(),
-                })
+                });
             }
         };
 
-        // Insérer la musique dans la base de données
-        let query = "INSERT INTO musique (uuid, duree) VALUES ($1, $2)";
-        if let Err(_) = client.execute(query, &[&filename, &(total_duration.as_secs().to_string())]).await {
+        let query = "INSERT INTO musique (uuid, duree, image) VALUES ($1, $2, $3)";
+        let duree_str = total_duration.as_secs().to_string();
+
+        if let Err(e) = client.execute(query, &[&audio, &duree_str, &image]).await {
             return HttpResponse::InternalServerError().json(ResponseMessage {
-                message: "filename+".to_string()+&filename+"total duration"+ &total_duration.as_secs().to_string(),
+                message: format!("Erreur lors de l'insertion dans la base de données : {}", e),
             });
         }
 
-        return HttpResponse::Ok().json(ResponseMessage {
-            message: format!("Musique ajoutée avec succès: {}", filename),
-        });
+        HttpResponse::Ok().json(ResponseMessage {
+            message: "Musique ajoutée avec succès".to_string(),
+        })
+    } else {
+        HttpResponse::BadRequest().json(ResponseMessage {
+            message: "Les fichiers audio et image sont requis".to_string(),
+        })
     }
-
-    HttpResponse::BadRequest().json(ResponseMessage {
-        message: "Aucun fichier trouvé".to_string(),
-    })
 }
+
+
 
 
 
@@ -155,6 +188,54 @@ fn get_audio_duration(file_path: &str) -> std::time::Duration {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct MusiqueAffcherPlaylist {
+    id: i32,
+    image: String,
+    uuid: String,
+    duree: String,  // Durée en format chaîne (ex: "06:31")
+}
+
+async fn get_musiques_playlist(id: web::Path<i32> ) -> impl Responder {
+    let client = match get_connection().await {
+        Ok(client) => client,
+        Err(_) => {
+            return HttpResponse::InternalServerError().json(ResponseMessage {
+                message: "Erreur de connexion à la base de données".to_string(),
+            });
+        }
+    };
+
+    let query = "SELECT id, image, uuid, duree FROM musique WHERE id_playlist = $1";
+    let rows = match client.query(query, &[&id.into_inner()]).await {
+        Ok(rows) => rows,
+        Err(_) => {
+            return HttpResponse::InternalServerError().json(ResponseMessage {
+                message: "Erreur lors de la récupération des musiques de la playlist".to_string(),
+            });
+        }
+    };
+
+    let mut musiques: Vec<MusiqueAffcherPlaylist> = Vec::new();
+    for row in rows {
+        let id: i32 = row.get(0);
+        let image: String = row.get(1);
+        let uuid: String = row.get(2);
+        let duree_str: String = row.get(3);  // Durée sous forme de chaîne
+
+        // Créer une instance de Musique et l'ajouter à la liste
+        let musique = MusiqueAffcherPlaylist {
+            id,
+            image,
+            uuid,
+            duree: duree_str,
+        };
+        musiques.push(musique);
+    }
+
+    HttpResponse::Ok().json(musiques)  // Renvoie la liste des musiques
+}
+
 
 async fn get_musique(uuid: web::Path<String>) -> impl Responder {
     let client = match get_connection().await {
@@ -166,7 +247,7 @@ async fn get_musique(uuid: web::Path<String>) -> impl Responder {
         }
     };
 
-    let query = "SELECT id, uuid, duree FROM musique WHERE uuid = $1";
+    let query = "SELECT uuid FROM musique WHERE uuid = $1";
     let row = match client.query_opt(query, &[&uuid.into_inner()]).await {
         Ok(Some(row)) => row,
         Ok(None) => {
@@ -181,14 +262,14 @@ async fn get_musique(uuid: web::Path<String>) -> impl Responder {
         }
     };
 
-    let musique = Musique {
-        id: row.get(0),
-        uuid: row.get(1),
-        duree: row.get::<_, String>(2) as String,
-    };
+    let uuid: String = row.get(0);
+    let file_url = format!("http://127.0.0.1:8080/musiques/{}", uuid);
 
-    HttpResponse::Ok().json(musique)
+    HttpResponse::Ok().json(serde_json::json!({
+        "url": file_url
+    }))
 }
+
 
 
 async fn get_all_musiques() -> impl Responder {
@@ -201,7 +282,7 @@ async fn get_all_musiques() -> impl Responder {
         }
     };
 
-    let query = "SELECT id, uuid, duree FROM musique";
+    let query = "SELECT id, uuid, duree, image FROM musique";
     let rows = match client.query(query, &[]).await {
         Ok(rows) => rows,
         Err(_) => {
@@ -211,19 +292,27 @@ async fn get_all_musiques() -> impl Responder {
         }
     };
 
+    // Mapper les résultats de la requête vers un vecteur de musiques avec URL d'image
     let musiques: Vec<Musique> = rows
-    .iter()
-    .map(|row| Musique {
-        id: row.get::<_, i32>(0),  // Assurez-vous que le type correspond (i32 pour l'ID)
-        uuid: row.get::<_, String>(1),  // Le type attendu pour UUID est String
-        duree: row.get::<_, String>(2),  // La durée peut être un String, ou un autre type selon la table
-    })
-    .collect();
+        .iter()
+        .map(|row| {
+            let image = row.get::<_, Option<String>>(3); // Option<String> pour gérer les images NULL
+            let image_url = image.as_ref().map(|img| format!("http://127.0.0.1:8080/images/{}", img));
+            Musique {
+                id: row.get::<_, i32>(0),
+                uuid: row.get::<_, String>(1),
+                duree: row.get::<_, String>(2),
+                image,
+                image_url, // Ajouter l'URL d'image ici
+            }
+        })
+        .collect();
 
-    
-
+    // Retourner les musiques avec les URL d'images
     HttpResponse::Ok().json(musiques)
 }
+
+
 
 async fn supprimer_musique(uuid: web::Path<String>) -> impl Responder {
     let client = match get_connection().await {
@@ -372,9 +461,13 @@ struct Playlist {
     id_createur: i32,
     nombre_morceaux: i32,
 }
+#[derive(Deserialize)]
+struct QueryParams {
+    id_user: i32,
+}
 
 // Fonction pour récupérer toutes les playlists
-async fn get_all_playlists() -> impl Responder {
+async fn get_all_playlists(id_user: web::Query<QueryParams>) -> impl Responder {
     // Connexion à la base de données
     let conn = match get_connection().await {
         Ok(conn) => conn,
@@ -385,24 +478,21 @@ async fn get_all_playlists() -> impl Responder {
         }
     };
 
-    let query = "SELECT id, nom_playlist, id_createur, nombre_morceaux FROM playlist";
+    let query = "SELECT id, nom_playlist, id_createur, nombre_morceaux FROM playlist WHERE id_createur = $1";
+    let id_value = id_user.into_inner();
 
     // Exécution de la requête pour récupérer les playlists
-    match conn.query(query, &[]).await {
+    match conn.query(query, &[&id_value.id_user]).await {
         Ok(rows) => {
-            // Mapper les résultats de la requête (rows) dans une liste de playlists
-            let playlists: Vec<Playlist> = rows
-                .iter()
-                .map(|row| Playlist {
-                    id: row.get("id"),
-                    nom_playlist: row.get("nom_playlist"),
-                    id_createur: row.get("id_createur"),
-                    nombre_morceaux: row.get("nombre_morceaux"),
-                })
-                .collect();
+            // Transformer les résultats en un tableau de playlists
+            let playlists: Vec<Playlist> = rows.iter().map(|row| Playlist {
+                id: row.get("id"),
+                nom_playlist: row.get("nom_playlist"),
+                id_createur: row.get("id_createur"),
+                nombre_morceaux: row.get("nombre_morceaux"),
+            }).collect();
 
-            // Retourner la liste des playlists sérialisée en JSON
-            HttpResponse::Ok().json(playlists)
+            HttpResponse::Ok().json(playlists) // Retourner un tableau JSON
         }
         Err(_) => {
             HttpResponse::InternalServerError().json(ResponseMessage {
@@ -411,6 +501,7 @@ async fn get_all_playlists() -> impl Responder {
         }
     }
 }
+
 async fn get_playlist(id: web::Path<i32>) -> impl Responder {
     let conn = match get_connection().await {
         Ok(conn) => conn,
@@ -482,7 +573,7 @@ async fn add_user(user: web::Json<User>) -> impl Responder {
 }
 
 
-async fn connexion_user(user: web::Json<User>) -> impl Responder {
+async fn connexion_user(user: web::Query<User>) -> impl Responder {
     let conn = match get_connection().await {
         Ok(conn) => conn,
         Err(_) => {
@@ -502,9 +593,11 @@ async fn connexion_user(user: web::Json<User>) -> impl Responder {
                     id: row.get("id"),
                     nom_utilisateur: row.get("nom_utilisateur"),
                 };
-                // Sérialiser et retourner la réponse JSON
+                
+                
                 HttpResponse::Ok().json(utilisateur)
             } else {
+                println!("Nom d'utilisateur ou mot de passe incorrect");
                 HttpResponse::Unauthorized().json(ResponseMessage {
                     message: "Nom d'utilisateur ou mot de passe incorrect".to_string(),
                 })
@@ -557,7 +650,36 @@ pub async fn start_server() -> std::io::Result<()> {
             .route("/addUser", web::post().to(add_user))
             .route("/user", web::get().to(connexion_user))
     });
-
-    // Essayer de lier et démarrer le serveur
     server.bind(format!("0.0.0.0:{}", port))?.run().await
 }
+
+////////////
+//  Pour le localhost
+////////////
+
+// pub async fn start_server() -> std::io::Result<()> {
+//     dotenv().ok();
+
+//     HttpServer::new(|| {
+//         App::new()
+//         .wrap(Cors::default().allow_any_origin().allow_any_method().allow_any_header())
+//             .route("/addMusique", web::post().to(add_musique))
+//             .route("/musiques", web::get().to(get_all_musiques))
+//             .route("/musique/{uuid}", web::get().to(get_musique))
+//             .route("/musiquePlaylist/{id}", web::get().to(get_musiques_playlist))
+//             .route("/supprimer/{uuid}", web::delete().to(supprimer_musique))
+//             .route("/addPlaylist", web::post().to(add_playlist))
+//             .route("/playlist", web::get().to(get_all_playlists))
+//             .route("/playlist/{id}", web::get().to(get_playlist))
+//             .route("/supprimerPlaylist/{id}", web::delete().to(supprimer_playlist))
+//             .route("/addMusiqueToPlaylist", web::post().to(add_musique_to_playlist))
+//             .route("/removeMusiqueFromPlaylist", web::post().to(remove_musique_from_playlist))
+//             .route("/addUser", web::post().to(add_user))
+//             .route("/user", web::get().to(connexion_user))
+//             .service(fs::Files::new("/musiques", "./src/musiques").show_files_listing())
+//             .service(fs::Files::new("/images", "./src/images").show_files_listing())
+//     })
+//     .bind("127.0.0.1:8080")?
+//     .run()
+//     .await
+// }
