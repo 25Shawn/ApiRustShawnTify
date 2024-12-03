@@ -21,7 +21,7 @@ tokio = { version = "1", features = ["full"] }
 actix-multipart = "0.4.0"
 futures = "0.3"
 actix-cors = "0.6" 
-
+actix-files = "0.6.0"  
 
 [package.metadata.assets]
 include = ["src/musiques/*.mp3"]
