@@ -640,6 +640,7 @@ pub async fn start_server() -> std::io::Result<()> {
             .route("/addMusique", web::post().to(add_musique))
             .route("/musiques", web::get().to(get_all_musiques))
             .route("/musique/{uuid}", web::get().to(get_musique))
+            .route("/musiquePlaylist/{id}", web::get().to(get_musiques_playlist))
             .route("/supprimer/{uuid}", web::delete().to(supprimer_musique))
             .route("/addPlaylist", web::post().to(add_playlist))
             .route("/playlist", web::get().to(get_all_playlists))
@@ -649,6 +650,8 @@ pub async fn start_server() -> std::io::Result<()> {
             .route("/removeMusiqueFromPlaylist", web::post().to(remove_musique_from_playlist))
             .route("/addUser", web::post().to(add_user))
             .route("/user", web::get().to(connexion_user))
+            .service(fs::Files::new("/musiques", "./src/musiques").show_files_listing())
+            .service(fs::Files::new("/images", "./src/images").show_files_listing())
     });
     server.bind(format!("0.0.0.0:{}", port))?.run().await
 }
