@@ -297,7 +297,7 @@ async fn get_all_musiques() -> impl Responder {
         .iter()
         .map(|row| {
             let image = row.get::<_, Option<String>>(3); // Option<String> pour gérer les images NULL
-            let image_url = image.as_ref().map(|img| format!("http://127.0.0.1:8080/images/{}", img));
+            let image_url = image.as_ref().map(|img| format!("https://apirustshawntify.onrender.com/images/{}", img));
             Musique {
                 id: row.get::<_, i32>(0),
                 uuid: row.get::<_, String>(1),
